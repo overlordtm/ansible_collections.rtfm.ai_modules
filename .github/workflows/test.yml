@@ -18,7 +18,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          path: ansible_collections/rtfm/ai_modules
+          path: .
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -34,18 +34,15 @@ jobs:
 
       - name: Lint Python code with ruff
         run: |
-          cd ansible_collections/rtfm/ai_modules
           ruff check plugins/modules/ --fix --exit-zero
           ruff format --check plugins/modules/ || true  # Don't fail on formatting for now
 
       - name: Type check with mypy
         run: |
-          cd ansible_collections/rtfm/ai_modules
           mypy plugins/modules/ --ignore-missing-imports || true  # Don't fail on type errors for now
 
       - name: Validate collection structure
         run: |
-          cd ansible_collections/rtfm/ai_modules
           ansible-galaxy collection build --force
           ansible-galaxy collection install rtfm-ai_modules-*.tar.gz --force
 
@@ -61,7 +58,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          path: ansible_collections/rtfm/ai_modules
+          path: .
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
@@ -81,12 +78,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd ansible_collections/rtfm/ai_modules
           uv pip install --system -r requirements.txt
 
       - name: Run unit tests
         run: |
-          cd ansible_collections/rtfm/ai_modules
           python -m pytest tests/unit/ -v --tb=short
 
   # Integration tests (real API calls, requires secrets)
@@ -101,7 +96,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          path: ansible_collections/rtfm/ai_modules
+          path: .
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -121,12 +116,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd ansible_collections/rtfm/ai_modules
           uv pip install --system -r requirements.txt
 
       - name: Set up Ansible collection
         run: |
-          cd ansible_collections/rtfm/ai_modules
           ansible-galaxy collection build --force
           ansible-galaxy collection install rtfm-ai_modules-*.tar.gz --force
 
@@ -135,7 +128,6 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          cd ansible_collections/rtfm/ai_modules
           # Run integration tests if API keys are available
           if [ -n "$GEMINI_API_KEY" ] && [ -n "$OPENROUTER_API_KEY" ]; then
             echo "Running integration tests with API keys"
@@ -157,7 +149,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          path: ansible_collections/rtfm/ai_modules
+          path: .
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -177,12 +169,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd ansible_collections/rtfm/ai_modules
           uv pip install --system -r requirements.txt
 
       - name: Set up Ansible collection
         run: |
-          cd ansible_collections/rtfm/ai_modules
           ansible-galaxy collection build --force
           ansible-galaxy collection install rtfm-ai_modules-*.tar.gz --force
 
@@ -190,7 +180,6 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          cd ansible_collections/rtfm/ai_modules
           if [ -n "$GEMINI_API_KEY" ]; then
             echo "Testing Gemini module..."
             ansible-playbook tests/test_gemini.yml -v
@@ -202,7 +191,6 @@ jobs:
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          cd ansible_collections/rtfm/ai_modules
           if [ -n "$OPENROUTER_API_KEY" ]; then
             echo "Testing OpenRouter module..."
             ansible-playbook tests/test_openrouter.yml -v
@@ -215,7 +203,6 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          cd ansible_collections/rtfm/ai_modules
           if [ -n "$GEMINI_API_KEY" ] && [ -n "$OPENROUTER_API_KEY" ]; then
             echo "Running comparison tests..."
             ansible-playbook tests/test_both.yml -v
@@ -272,7 +259,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          path: ansible_collections/rtfm/ai_modules
+          path: .
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -296,19 +283,17 @@ jobs:
 
       - name: Build collection
         run: |
-          cd ansible_collections/rtfm/ai_modules
           ansible-galaxy collection build --force
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: collection-build
-          path: ansible_collections/rtfm/ai_modules/rtfm-ai_modules-*.tar.gz
+          path: rtfm-ai_modules-*.tar.gz
           retention-days: 7
 
       - name: Test collection installation
         run: |
-          cd ansible_collections/rtfm/ai_modules
           ansible-galaxy collection install rtfm-ai_modules-*.tar.gz --force
 
           # Verify modules can be imported
