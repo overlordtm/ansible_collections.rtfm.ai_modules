@@ -27,8 +27,6 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
 
       - name: Install dependencies
         run: |
@@ -67,8 +65,14 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
+
+      - name: Cache uv
+        uses: actions/cache@v4
         with:
-          enable-cache: true
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-${{ matrix.python-version }}-
 
       - name: Install dependencies
         run: |
@@ -101,8 +105,14 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
+
+      - name: Cache uv
+        uses: actions/cache@v4
         with:
-          enable-cache: true
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-integration-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-integration-
 
       - name: Install dependencies
         run: |
@@ -151,8 +161,14 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
+
+      - name: Cache uv
+        uses: actions/cache@v4
         with:
-          enable-cache: true
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-manual-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-manual-
 
       - name: Install dependencies
         run: |
@@ -248,8 +264,14 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
+
+      - name: Cache uv
+        uses: actions/cache@v4
         with:
-          enable-cache: true
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-build-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-build-
 
       - name: Install Ansible
         run: |
