@@ -4,13 +4,15 @@ Pytest configuration for rtfm.ai_modules tests
 """
 
 import sys
-import os
+
+from pathlib import Path
 from unittest.mock import Mock
 
 # Add the plugins directory to Python path
-plugins_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'plugins', 'modules'))
-if plugins_path not in sys.path:
-    sys.path.insert(0, plugins_path)
+plugins_path = Path(__file__).parent / '..' / 'plugins' / 'modules'
+plugins_path = plugins_path.resolve()
+if str(plugins_path) not in sys.path:
+    sys.path.insert(0, str(plugins_path))
 
 # Mock all external dependencies that might not be available in CI
 def mock_modules():

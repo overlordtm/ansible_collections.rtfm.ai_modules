@@ -21,10 +21,11 @@ select = [
 ignore = [
     "E501",   # Line too long (handled by formatter)
     "E203",   # Whitespace before ':' (conflicts with black)
-    "W503",   # Line break before binary operator (conflicts with black)
     "N806",   # Variable in function should be lowercase (Ansible modules use mixed case)
     "B008",   # Do not perform function calls in argument defaults (common in Ansible)
     "SIM108", # Use ternary operator instead of if-else-block (less readable for complex conditions)
+    "SIM117", # nested with-s ignored
+    "E402",   # ansible has documentation on top :D
 ]
 
 # Allow autofix for all enabled rules (when `--fix`) is provided.

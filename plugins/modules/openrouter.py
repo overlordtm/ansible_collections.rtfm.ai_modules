@@ -5,9 +5,7 @@
 # Copyright: (c) 2024, Andraz Vrhovec <andraz@rtfm.si>
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
-from __future__ import absolute_import, division, print_function
 
-__metaclass__ = type
 
 DOCUMENTATION = r"""
 ---
@@ -287,7 +285,7 @@ def make_openrouter_request(api_key, payload, timeout, retry_attempts, retry_del
                     error_msg = error_data.get("error", {}).get(
                         "message", "Bad request"
                     )
-                except:
+                except:  # noqa: E722
                     error_msg = response.text
                 module.fail_json(msg=f"OpenRouter API bad request: {error_msg}")
             else:
@@ -296,7 +294,7 @@ def make_openrouter_request(api_key, payload, timeout, retry_attempts, retry_del
                     error_msg = error_data.get("error", {}).get(
                         "message", f"HTTP {response.status_code}"
                     )
-                except:
+                except:  # noqa: E722
                     error_msg = f"HTTP {response.status_code}: {response.text}"
 
                 if response.status_code >= 500 and attempts <= retry_attempts:
@@ -344,21 +342,21 @@ def make_openrouter_request(api_key, payload, timeout, retry_attempts, retry_del
 
 
 def run_module():
-    module_args = dict(
-        api_key=dict(type="str", required=True, no_log=True),
-        prompt=dict(type="str", required=True),
-        model=dict(type="str", default="openai/gpt-3.5-turbo"),
-        system_message=dict(type="str", required=False),
-        temperature=dict(type="float", required=False),
-        top_p=dict(type="float", required=False),
-        max_tokens=dict(type="int", required=False),
-        frequency_penalty=dict(type="float", required=False),
-        presence_penalty=dict(type="float", required=False),
-        retry_attempts=dict(type="int", default=3),
-        retry_delay=dict(type="int", default=5),
-        raw_json_output=dict(type="bool", default=False),
-        timeout=dict(type="int", default=30),
-    )
+    module_args = {
+        "api_key": {"type": "str", "required": True, "no_log": True},
+        "prompt": {"type": "str", "required": True},
+        "model": {"type": "str", "default": "openai/gpt-3.5-turbo"},
+        "system_message": {"type": "str", "required": False},
+        "temperature": {"type": "float", "required": False},
+        "top_p": {"type": "float", "required": False},
+        "max_tokens": {"type": "int", "required": False},
+        "frequency_penalty": {"type": "float", "required": False},
+        "presence_penalty": {"type": "float", "required": False},
+        "retry_attempts": {"type": "int", "default": 3},
+        "retry_delay": {"type": "int", "default": 5},
+        "raw_json_output": {"type": "bool", "default": False},
+        "timeout": {"type": "int", "default": 30},
+    }
 
     global module
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=False)

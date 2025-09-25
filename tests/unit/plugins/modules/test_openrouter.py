@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-import json
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 
 # Import the module to test
 pytest_plugins = []
@@ -18,8 +18,9 @@ def test_can_import_openrouter():
 
 # Try to import the actual module
 try:
-    import openrouter
-    from openrouter import run_module, make_openrouter_request
+    import openrouter  # noqa: F401
+
+    from openrouter import make_openrouter_request, run_module
     MODULE_AVAILABLE = True
 except ImportError:
     MODULE_AVAILABLE = False
@@ -277,7 +278,7 @@ class TestOpenRouterModule:
                 'model': 'openai/gpt-3.5-turbo'
             }
 
-            with patch('openrouter.HAS_REQUESTS', True):
+            with patch('openrouter.HAS_REQUESTS', True):  # noqa: SIM117
                 with patch('openrouter.make_openrouter_request', return_value=mock_response_data):
                     run_module()
 
@@ -314,7 +315,7 @@ class TestOpenRouterModule:
                 'model': 'openai/gpt-3.5-turbo'
             }
 
-            with patch('openrouter.HAS_REQUESTS', True):
+            with patch('openrouter.HAS_REQUESTS', True):  # noqa: SIM117
                 with patch('openrouter.make_openrouter_request', return_value=mock_response_data):
                     run_module()
 

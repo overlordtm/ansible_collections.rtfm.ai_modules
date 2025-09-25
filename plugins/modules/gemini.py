@@ -5,9 +5,7 @@
 # Copyright: (c) 2024, Your Name <your_email@example.com>
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
-from __future__ import absolute_import, division, print_function
 
-__metaclass__ = type
 
 DOCUMENTATION = r"""
 ---
@@ -250,6 +248,7 @@ import traceback
 
 try:
     import google.generativeai as genai
+
     from google.api_core import exceptions as google_exceptions
 
     # We might need json_format for robust protobuf to dict conversion
@@ -471,20 +470,20 @@ def convert_candidate_to_dict(candidate_obj):
 
 
 def run_module():
-    module_args = dict(
-        api_key=dict(type="str", required=True, no_log=True),
-        prompt=dict(type="str", required=True),
-        model_name=dict(type="str", default="gemini-1.5-flash-latest"),
-        temperature=dict(type="float", required=False),
-        top_p=dict(type="float", required=False),
-        top_k=dict(type="int", required=False),
-        max_output_tokens=dict(type="int", required=False),
-        candidate_count=dict(type="int", default=1),
-        safety_settings=dict(type="dict", required=False),
-        retry_attempts=dict(type="int", default=3),
-        retry_delay=dict(type="int", default=5),
-        raw_json_output=dict(type="bool", default=False),
-    )
+    module_args = {
+        "api_key": {"type": "str", "required": True, "no_log": True},
+        "prompt": {"type": "str", "required": True},
+        "model_name": {"type": "str", "default": "gemini-1.5-flash-latest"},
+        "temperature": {"type": "float", "required": False},
+        "top_p": {"type": "float", "required": False},
+        "top_k": {"type": "int", "required": False},
+        "max_output_tokens": {"type": "int", "required": False},
+        "candidate_count": {"type": "int", "default": 1},
+        "safety_settings": {"type": "dict", "required": False},
+        "retry_attempts": {"type": "int", "default": 3},
+        "retry_delay": {"type": "int", "default": 5},
+        "raw_json_output": {"type": "bool", "default": False},
+    }
 
     global module  # Make module available to helper functions
     module = AnsibleModule(
@@ -564,7 +563,6 @@ def run_module():
     # --- Call Gemini API with Retry Logic ---
     attempts = 0
     response = None
-    last_exception = None
 
     while attempts <= retry_attempts:
         attempts += 1
@@ -630,7 +628,7 @@ def run_module():
                 content_blocked = False
                 for rating in candidate_safety_ratings:
                     # Check if the rating indicates a block
-                    if (
+                    if (  # noqa: SIM102
                         rating.get("probability")
                         and rating.get("probability") != "NEGLIGIBLE"
                     ):
@@ -710,7 +708,6 @@ def run_module():
             break
 
         except google_exceptions.ResourceExhausted as e:
-            last_exception = e
             if attempts > retry_attempts:
                 module.fail_json(
                     msg=f"Gemini API rate limit exceeded after {retry_attempts} retries: {str(e)}",
@@ -731,16 +728,13 @@ def run_module():
             )
         except google_exceptions.GoogleAPIError as e:
             # Catch other Google API errors (permissions, server errors, etc.)
-            last_exception = e
             if attempts > retry_attempts:
                 module.fail_json(
                     msg=f"Gemini API Error after {retry_attempts} retries: {str(e)}",
                     exception=traceback.format_exc(),
                 )
             # Consider retrying some non-ResourceExhausted errors? For now, only retry rate limits and transient server errors.
-            if isinstance(e, google_exceptions.InternalServerError) or isinstance(
-                e, google_exceptions.ServiceUnavailable
-            ):
+            if isinstance(e, (google_exceptions.InternalServerError, google_exceptions.ServiceUnavailable)):
                 module.warn(
                     f"Transient API error encountered, retrying in {retry_delay} seconds... (Attempt {attempts}/{retry_attempts}) Error: {str(e)}"
                 )

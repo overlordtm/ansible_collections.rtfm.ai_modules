@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-
 # Import the module to test
 import sys
-import os
+
+from pathlib import Path
+from unittest.mock import Mock, patch
+
+import pytest
 
 # Add the plugins/modules directory to the Python path
-modules_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../plugins/modules'))
-if modules_path not in sys.path:
-    sys.path.insert(0, modules_path)
+modules_path = Path(__file__).parent / '../../../../plugins/modules'
+modules_path = modules_path.resolve()
+if str(modules_path) not in sys.path:
+    sys.path.insert(0, str(modules_path))
 
 # Mock ansible and google modules before importing
 sys.modules['ansible'] = Mock()
@@ -23,7 +25,7 @@ sys.modules['google.api_core.exceptions'] = Mock()
 
 # Now import the module
 try:
-    from gemini import run_module, convert_safety_settings_input_to_api
+    from gemini import convert_safety_settings_input_to_api, run_module
 except ImportError as e:
     pytest.skip(f"Could not import gemini module: {e}")
 
@@ -85,28 +87,27 @@ class TestGeminiModule:
 
     def test_safety_settings_conversion_valid(self):
         """Test valid safety settings conversion"""
-        with patch('gemini.module') as mock_module:
-            with patch('gemini.genai') as mock_genai:
-                # Mock the enum access
-                mock_genai.types.HarmCategory = {
-                    'HARM_CATEGORY_HARASSMENT': 'HARM_CATEGORY_HARASSMENT',
-                    'HARM_CATEGORY_HATE_SPEECH': 'HARM_CATEGORY_HATE_SPEECH'
-                }
-                mock_genai.types.HarmBlockThreshold = {
-                    'BLOCK_ONLY_HIGH': 'BLOCK_ONLY_HIGH',
-                    'BLOCK_MEDIUM_AND_ABOVE': 'BLOCK_MEDIUM_AND_ABOVE'
-                }
+        with patch('gemini.module'), patch('gemini.genai') as mock_genai:
+            # Mock the enum access
+            mock_genai.types.HarmCategory = {
+                'HARM_CATEGORY_HARASSMENT': 'HARM_CATEGORY_HARASSMENT',
+                'HARM_CATEGORY_HATE_SPEECH': 'HARM_CATEGORY_HATE_SPEECH'
+            }
+            mock_genai.types.HarmBlockThreshold = {
+                'BLOCK_ONLY_HIGH': 'BLOCK_ONLY_HIGH',
+                'BLOCK_MEDIUM_AND_ABOVE': 'BLOCK_MEDIUM_AND_ABOVE'
+            }
 
-                input_settings = {
-                    'HARM_CATEGORY_HARASSMENT': 'BLOCK_ONLY_HIGH',
-                    'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_MEDIUM_AND_ABOVE'
-                }
+            input_settings = {
+                'HARM_CATEGORY_HARASSMENT': 'BLOCK_ONLY_HIGH',
+                'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_MEDIUM_AND_ABOVE'
+            }
 
-                result = convert_safety_settings_input_to_api(input_settings)
+            result = convert_safety_settings_input_to_api(input_settings)
 
-                assert len(result) == 2
-                assert result[0]['category'] == 'HARM_CATEGORY_HARASSMENT'
-                assert result[0]['threshold'] == 'BLOCK_ONLY_HIGH'
+            assert len(result) == 2
+            assert result[0]['category'] == 'HARM_CATEGORY_HARASSMENT'
+            assert result[0]['threshold'] == 'BLOCK_ONLY_HIGH'
 
     def test_safety_settings_conversion_invalid_category(self):
         """Test invalid safety settings category"""
@@ -183,7 +184,7 @@ class TestGeminiModule:
             mock_model.generate_content.return_value = mock_response
 
             # Mock conversion functions
-            with patch('gemini.convert_prompt_feedback_to_dict', return_value=None):
+            with patch('gemini.convert_prompt_feedback_to_dict', return_value=None):  # noqa: SIM117
                 with patch('gemini.convert_usage_metadata_to_dict', return_value={'total_token_count': 50}):
                     with patch('gemini.convert_candidate_to_dict', return_value={'finish_reason': 'STOP'}):
                         with patch('gemini.HAS_GEMINI_LIB', True):
@@ -233,7 +234,7 @@ class TestGeminiModule:
                 'safety_ratings': [{'category': 'HARM_CATEGORY_HATE_SPEECH', 'probability': 'HIGH'}]
             }
 
-            with patch('gemini.convert_prompt_feedback_to_dict', return_value=blocked_feedback):
+            with patch('gemini.convert_prompt_feedback_to_dict', return_value=blocked_feedback):  # noqa: SIM117
                 with patch('gemini.convert_usage_metadata_to_dict', return_value=None):
                     with patch('gemini.convert_candidate_to_dict', return_value=None):
                         with patch('gemini.HAS_GEMINI_LIB', True):
@@ -282,7 +283,7 @@ class TestGeminiModule:
 
             mock_model.generate_content.side_effect = [rate_limit_error, mock_success_response]
 
-            with patch('gemini.google_exceptions.ResourceExhausted', type(rate_limit_error)):
+            with patch('gemini.google_exceptions.ResourceExhausted', type(rate_limit_error)):  # noqa: SIM117
                 with patch('gemini.convert_prompt_feedback_to_dict', return_value=None):
                     with patch('gemini.convert_usage_metadata_to_dict', return_value={}):
                         with patch('gemini.convert_candidate_to_dict', return_value={'finish_reason': 'STOP'}):
