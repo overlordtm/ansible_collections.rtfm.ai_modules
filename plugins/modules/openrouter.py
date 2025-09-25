@@ -6,9 +6,10 @@
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import absolute_import, division, print_function
+
 __metaclass__ = type
 
-DOCUMENTATION = r'''
+DOCUMENTATION = r"""
 ---
 module: openrouter
 short_description: Interact with OpenRouter API
@@ -99,9 +100,9 @@ notes:
   - Ansible's Jinja2 templating engine processes the 'prompt' argument *before* it is passed to this module.
   - Check the OpenRouter documentation for the latest model names and parameter behaviors.
   - When `raw_json_output: true`, the structure of the returned data changes significantly.
-'''
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: Summarize security report using OpenRouter
   hosts: localhost
   gather_facts: no
@@ -176,9 +177,9 @@ EXAMPLES = r'''
           GPT-4: {{ gpt4_response.result.text }}
 
           Claude: {{ claude_response.result.text }}
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 result:
   description: The simplified result object representing the primary outcome of the OpenRouter API call.
   type: dict
@@ -227,14 +228,14 @@ raw_response:
     created:
       description: Unix timestamp of when the completion was created.
       type: int
-'''
+"""
 
-import json
 import time
 import traceback
 
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
@@ -243,6 +244,7 @@ from ansible.module_utils.basic import AnsibleModule
 
 module = None
 
+
 def make_openrouter_request(api_key, payload, timeout, retry_attempts, retry_delay):
     """Make a request to the OpenRouter API with retry logic."""
     url = "https://openrouter.ai/api/v1/chat/completions"
@@ -250,7 +252,7 @@ def make_openrouter_request(api_key, payload, timeout, retry_attempts, retry_del
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "HTTP-Referer": "https://github.com/overlordtm/ansible-ai-modules",
-        "X-Title": "Ansible AI Modules"
+        "X-Title": "Ansible AI Modules",
     }
 
     attempts = 0
@@ -260,38 +262,47 @@ def make_openrouter_request(api_key, payload, timeout, retry_attempts, retry_del
         attempts += 1
         try:
             response = requests.post(
-                url,
-                headers=headers,
-                json=payload,
-                timeout=timeout
+                url, headers=headers, json=payload, timeout=timeout
             )
 
             if response.status_code == 200:
                 return response.json()
             elif response.status_code == 429:  # Rate limit
                 if attempts > retry_attempts:
-                    module.fail_json(msg=f"OpenRouter API rate limit exceeded after {retry_attempts} retries")
-                module.warn(f"Rate limit exceeded, retrying in {retry_delay} seconds... (Attempt {attempts}/{retry_attempts})")
+                    module.fail_json(
+                        msg=f"OpenRouter API rate limit exceeded after {retry_attempts} retries"
+                    )
+                module.warn(
+                    f"Rate limit exceeded, retrying in {retry_delay} seconds... (Attempt {attempts}/{retry_attempts})"
+                )
                 time.sleep(retry_delay)
                 continue
             elif response.status_code == 401:
-                module.fail_json(msg="OpenRouter API authentication failed. Check your API key.")
+                module.fail_json(
+                    msg="OpenRouter API authentication failed. Check your API key."
+                )
             elif response.status_code == 400:
                 try:
                     error_data = response.json()
-                    error_msg = error_data.get('error', {}).get('message', 'Bad request')
+                    error_msg = error_data.get("error", {}).get(
+                        "message", "Bad request"
+                    )
                 except:
                     error_msg = response.text
                 module.fail_json(msg=f"OpenRouter API bad request: {error_msg}")
             else:
                 try:
                     error_data = response.json()
-                    error_msg = error_data.get('error', {}).get('message', f'HTTP {response.status_code}')
+                    error_msg = error_data.get("error", {}).get(
+                        "message", f"HTTP {response.status_code}"
+                    )
                 except:
                     error_msg = f"HTTP {response.status_code}: {response.text}"
 
                 if response.status_code >= 500 and attempts <= retry_attempts:
-                    module.warn(f"Server error encountered, retrying in {retry_delay} seconds... (Attempt {attempts}/{retry_attempts}) Error: {error_msg}")
+                    module.warn(
+                        f"Server error encountered, retrying in {retry_delay} seconds... (Attempt {attempts}/{retry_attempts}) Error: {error_msg}"
+                    )
                     time.sleep(retry_delay)
                     continue
                 else:
@@ -300,65 +311,77 @@ def make_openrouter_request(api_key, payload, timeout, retry_attempts, retry_del
         except requests.exceptions.Timeout as e:
             last_exception = e
             if attempts > retry_attempts:
-                module.fail_json(msg=f"OpenRouter API request timeout after {retry_attempts} retries: {str(e)}")
-            module.warn(f"Request timeout, retrying in {retry_delay} seconds... (Attempt {attempts}/{retry_attempts})")
+                module.fail_json(
+                    msg=f"OpenRouter API request timeout after {retry_attempts} retries: {str(e)}"
+                )
+            module.warn(
+                f"Request timeout, retrying in {retry_delay} seconds... (Attempt {attempts}/{retry_attempts})"
+            )
             time.sleep(retry_delay)
             continue
 
         except requests.exceptions.ConnectionError as e:
             last_exception = e
             if attempts > retry_attempts:
-                module.fail_json(msg=f"OpenRouter API connection error after {retry_attempts} retries: {str(e)}")
-            module.warn(f"Connection error, retrying in {retry_delay} seconds... (Attempt {attempts}/{retry_attempts})")
+                module.fail_json(
+                    msg=f"OpenRouter API connection error after {retry_attempts} retries: {str(e)}"
+                )
+            module.warn(
+                f"Connection error, retrying in {retry_delay} seconds... (Attempt {attempts}/{retry_attempts})"
+            )
             time.sleep(retry_delay)
             continue
 
         except Exception as e:
-            module.fail_json(msg=f"Unexpected error during OpenRouter API request: {str(e)}",
-                           exception=traceback.format_exc())
+            module.fail_json(
+                msg=f"Unexpected error during OpenRouter API request: {str(e)}",
+                exception=traceback.format_exc(),
+            )
 
-    module.fail_json(msg=f"OpenRouter API request failed after {retry_attempts} retries. Last error: {str(last_exception)}")
+    module.fail_json(
+        msg=f"OpenRouter API request failed after {retry_attempts} retries. Last error: {str(last_exception)}"
+    )
+
 
 def run_module():
     module_args = dict(
-        api_key=dict(type='str', required=True, no_log=True),
-        prompt=dict(type='str', required=True),
-        model=dict(type='str', default='openai/gpt-3.5-turbo'),
-        system_message=dict(type='str', required=False),
-        temperature=dict(type='float', required=False),
-        top_p=dict(type='float', required=False),
-        max_tokens=dict(type='int', required=False),
-        frequency_penalty=dict(type='float', required=False),
-        presence_penalty=dict(type='float', required=False),
-        retry_attempts=dict(type='int', default=3),
-        retry_delay=dict(type='int', default=5),
-        raw_json_output=dict(type='bool', default=False),
-        timeout=dict(type='int', default=30),
+        api_key=dict(type="str", required=True, no_log=True),
+        prompt=dict(type="str", required=True),
+        model=dict(type="str", default="openai/gpt-3.5-turbo"),
+        system_message=dict(type="str", required=False),
+        temperature=dict(type="float", required=False),
+        top_p=dict(type="float", required=False),
+        max_tokens=dict(type="int", required=False),
+        frequency_penalty=dict(type="float", required=False),
+        presence_penalty=dict(type="float", required=False),
+        retry_attempts=dict(type="int", default=3),
+        retry_delay=dict(type="int", default=5),
+        raw_json_output=dict(type="bool", default=False),
+        timeout=dict(type="int", default=30),
     )
 
     global module
-    module = AnsibleModule(
-        argument_spec=module_args,
-        supports_check_mode=False
-    )
+    module = AnsibleModule(argument_spec=module_args, supports_check_mode=False)
 
     if not HAS_REQUESTS:
-        module.fail_json(msg="The 'requests' Python library is required. Please install it: pip install requests")
+        module.fail_json(
+            msg="The 'requests' Python library is required. Please install it: pip install requests"
+        )
 
     # Get parameters
-    api_key = module.params['api_key']
-    prompt = module.params['prompt']
-    model_name = module.params['model']
-    system_message = module.params['system_message']
-    temperature = module.params['temperature']
-    top_p = module.params['top_p']
-    max_tokens = module.params['max_tokens']
-    frequency_penalty = module.params['frequency_penalty']
-    presence_penalty = module.params['presence_penalty']
-    retry_attempts = module.params['retry_attempts']
-    retry_delay = module.params['retry_delay']
-    raw_json_output = module.params['raw_json_output']
-    timeout = module.params['timeout']
+    api_key = module.params["api_key"]
+    prompt = module.params["prompt"]
+    model_name = module.params["model"]
+    system_message = module.params["system_message"]
+    temperature = module.params["temperature"]
+    top_p = module.params["top_p"]
+    max_tokens = module.params["max_tokens"]
+    frequency_penalty = module.params["frequency_penalty"]
+    presence_penalty = module.params["presence_penalty"]
+    retry_attempts = module.params["retry_attempts"]
+    retry_delay = module.params["retry_delay"]
+    raw_json_output = module.params["raw_json_output"]
+    timeout = module.params["timeout"]
 
     # Parameter validation
     if temperature is not None and not (0.0 <= temperature <= 2.0):
@@ -368,9 +391,13 @@ def run_module():
     if max_tokens is not None and max_tokens <= 0:
         module.fail_json(msg="Parameter 'max_tokens' must be a positive integer")
     if frequency_penalty is not None and not (-2.0 <= frequency_penalty <= 2.0):
-        module.fail_json(msg="Parameter 'frequency_penalty' must be between -2.0 and 2.0")
+        module.fail_json(
+            msg="Parameter 'frequency_penalty' must be between -2.0 and 2.0"
+        )
     if presence_penalty is not None and not (-2.0 <= presence_penalty <= 2.0):
-        module.fail_json(msg="Parameter 'presence_penalty' must be between -2.0 and 2.0")
+        module.fail_json(
+            msg="Parameter 'presence_penalty' must be between -2.0 and 2.0"
+        )
     if timeout <= 0:
         module.fail_json(msg="Parameter 'timeout' must be a positive integer")
 
@@ -381,25 +408,24 @@ def run_module():
     messages.append({"role": "user", "content": prompt})
 
     # Build payload
-    payload = {
-        "model": model_name,
-        "messages": messages
-    }
+    payload = {"model": model_name, "messages": messages}
 
     # Add optional parameters
     if temperature is not None:
-        payload['temperature'] = temperature
+        payload["temperature"] = temperature
     if top_p is not None:
-        payload['top_p'] = top_p
+        payload["top_p"] = top_p
     if max_tokens is not None:
-        payload['max_tokens'] = max_tokens
+        payload["max_tokens"] = max_tokens
     if frequency_penalty is not None:
-        payload['frequency_penalty'] = frequency_penalty
+        payload["frequency_penalty"] = frequency_penalty
     if presence_penalty is not None:
-        payload['presence_penalty'] = presence_penalty
+        payload["presence_penalty"] = presence_penalty
 
     # Make the API request
-    response_data = make_openrouter_request(api_key, payload, timeout, retry_attempts, retry_delay)
+    response_data = make_openrouter_request(
+        api_key, payload, timeout, retry_attempts, retry_delay
+    )
 
     # Process response
     if raw_json_output:
@@ -407,27 +433,31 @@ def run_module():
     else:
         # Extract the main text response
         try:
-            text_response = response_data['choices'][0]['message']['content']
-            usage_info = response_data.get('usage', {})
+            text_response = response_data["choices"][0]["message"]["content"]
+            usage_info = response_data.get("usage", {})
 
             result = {
-                'text': text_response,
-                'model': response_data.get('model', model_name),
-                'usage': {
-                    'prompt_tokens': usage_info.get('prompt_tokens', 0),
-                    'completion_tokens': usage_info.get('completion_tokens', 0),
-                    'total_tokens': usage_info.get('total_tokens', 0)
-                }
+                "text": text_response,
+                "model": response_data.get("model", model_name),
+                "usage": {
+                    "prompt_tokens": usage_info.get("prompt_tokens", 0),
+                    "completion_tokens": usage_info.get("completion_tokens", 0),
+                    "total_tokens": usage_info.get("total_tokens", 0),
+                },
             }
 
             module.exit_json(changed=True, result=result)
 
         except (KeyError, IndexError) as e:
-            module.fail_json(msg=f"Unexpected response structure from OpenRouter API: {str(e)}",
-                           raw_response=response_data)
+            module.fail_json(
+                msg=f"Unexpected response structure from OpenRouter API: {str(e)}",
+                raw_response=response_data,
+            )
+
 
 def main():
     run_module()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
