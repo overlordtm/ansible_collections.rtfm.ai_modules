@@ -214,3 +214,7 @@ pyrightconfig.json
 
 .claude
 .env
+
+
+# butilt ansible collections
+rtfm-ai_modules-*.tar.gz
