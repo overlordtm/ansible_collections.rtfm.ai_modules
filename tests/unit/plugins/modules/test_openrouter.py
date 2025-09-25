@@ -54,8 +54,15 @@ class TestOpenRouterModule:
                 'timeout': 30
             }
 
+            # Mock fail_json to raise an exception to stop execution early
+            mock_instance.fail_json.side_effect = SystemExit("Parameter validation failed")
+
             with patch('openrouter.HAS_REQUESTS', True):
-                run_module()
+                try:
+                    run_module()
+                except SystemExit:
+                    pass  # Expected behavior when fail_json is called
+
                 mock_instance.fail_json.assert_called_once()
                 call_args = mock_instance.fail_json.call_args[1]
                 assert 'temperature' in call_args['msg']
@@ -81,8 +88,15 @@ class TestOpenRouterModule:
                 'timeout': 30
             }
 
+            # Mock fail_json to raise an exception to stop execution early
+            mock_instance.fail_json.side_effect = SystemExit("Parameter validation failed")
+
             with patch('openrouter.HAS_REQUESTS', True):
-                run_module()
+                try:
+                    run_module()
+                except SystemExit:
+                    pass  # Expected behavior when fail_json is called
+
                 mock_instance.fail_json.assert_called_once()
                 call_args = mock_instance.fail_json.call_args[1]
                 assert 'temperature' in call_args['msg']
@@ -108,8 +122,15 @@ class TestOpenRouterModule:
                 'timeout': 30
             }
 
+            # Mock fail_json to raise an exception to stop execution early
+            mock_instance.fail_json.side_effect = SystemExit("Parameter validation failed")
+
             with patch('openrouter.HAS_REQUESTS', True):
-                run_module()
+                try:
+                    run_module()
+                except SystemExit:
+                    pass  # Expected behavior when fail_json is called
+
                 mock_instance.fail_json.assert_called_once()
                 call_args = mock_instance.fail_json.call_args[1]
                 assert 'max_tokens' in call_args['msg']
@@ -237,8 +258,15 @@ class TestOpenRouterModule:
             mock_instance = Mock()
             mock_module.return_value = mock_instance
 
+            # Mock fail_json to raise an exception to stop execution early
+            mock_instance.fail_json.side_effect = SystemExit("Library missing")
+
             with patch('openrouter.HAS_REQUESTS', False):
-                run_module()
+                try:
+                    run_module()
+                except SystemExit:
+                    pass  # Expected behavior when fail_json is called
+
                 mock_instance.fail_json.assert_called_once()
                 call_args = mock_instance.fail_json.call_args[1]
                 assert 'requests' in call_args['msg']

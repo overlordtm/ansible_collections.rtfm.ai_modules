@@ -14,6 +14,19 @@ modules_path = modules_path.resolve()
 if str(modules_path) not in sys.path:
     sys.path.insert(0, str(modules_path))
 
+# Create mock exception classes that inherit from Exception
+class MockGoogleAPIError(Exception):
+    """Mock Google API Error that can be caught"""
+    pass
+
+class MockResourceExhausted(Exception):
+    """Mock Resource Exhausted Error that can be caught"""
+    pass
+
+class MockInternalServerError(Exception):
+    """Mock Internal Server Error that can be caught"""
+    pass
+
 # Mock ansible and google modules before importing
 sys.modules['ansible'] = Mock()
 sys.modules['ansible.module_utils'] = Mock()
@@ -21,7 +34,13 @@ sys.modules['ansible.module_utils.basic'] = Mock()
 sys.modules['google'] = Mock()
 sys.modules['google.generativeai'] = Mock()
 sys.modules['google.api_core'] = Mock()
-sys.modules['google.api_core.exceptions'] = Mock()
+
+# Create a proper mock for exceptions module
+mock_exceptions = Mock()
+mock_exceptions.GoogleAPIError = MockGoogleAPIError
+mock_exceptions.ResourceExhausted = MockResourceExhausted
+mock_exceptions.InternalServerError = MockInternalServerError
+sys.modules['google.api_core.exceptions'] = mock_exceptions
 
 # Now import the module
 try:
@@ -53,8 +72,15 @@ class TestGeminiModule:
                 'raw_json_output': False
             }
 
+            # Mock fail_json to raise an exception to stop execution early
+            mock_instance.fail_json.side_effect = SystemExit("Parameter validation failed")
+
             with patch('gemini.HAS_GEMINI_LIB', True):
-                run_module()
+                try:
+                    run_module()
+                except SystemExit:
+                    pass  # Expected behavior when fail_json is called
+
                 mock_instance.fail_json.assert_called_once()
                 call_args = mock_instance.fail_json.call_args[1]
                 assert 'temperature' in call_args['msg']
@@ -79,8 +105,15 @@ class TestGeminiModule:
                 'raw_json_output': False
             }
 
+            # Mock fail_json to raise an exception to stop execution early
+            mock_instance.fail_json.side_effect = SystemExit("Parameter validation failed")
+
             with patch('gemini.HAS_GEMINI_LIB', True):
-                run_module()
+                try:
+                    run_module()
+                except SystemExit:
+                    pass  # Expected behavior when fail_json is called
+
                 mock_instance.fail_json.assert_called_once()
                 call_args = mock_instance.fail_json.call_args[1]
                 assert 'top_k' in call_args['msg']
@@ -143,8 +176,15 @@ class TestGeminiModule:
             mock_instance = Mock()
             mock_module.return_value = mock_instance
 
+            # Mock fail_json to raise an exception to stop execution early
+            mock_instance.fail_json.side_effect = SystemExit("Library missing")
+
             with patch('gemini.HAS_GEMINI_LIB', False):
-                run_module()
+                try:
+                    run_module()
+                except SystemExit:
+                    pass  # Expected behavior when fail_json is called
+
                 mock_instance.fail_json.assert_called_once()
                 call_args = mock_instance.fail_json.call_args[1]
                 assert 'google-generativeai' in call_args['msg']
