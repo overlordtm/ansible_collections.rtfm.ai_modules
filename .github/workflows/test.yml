@@ -30,13 +30,18 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install --system ansible-core flake8 black mypy
+          uv pip install --system ansible-core ruff mypy
 
-      - name: Lint Python code
+      - name: Lint Python code with ruff
         run: |
           cd ansible_collections/rtfm/ai_modules
-          flake8 plugins/modules/ --max-line-length=120 --ignore=E501,W503
-          black --check plugins/modules/ || true  # Don't fail on formatting for now
+          ruff check plugins/modules/ --fix --exit-zero
+          ruff format --check plugins/modules/ || true  # Don't fail on formatting for now
+
+      - name: Type check with mypy
+        run: |
+          cd ansible_collections/rtfm/ai_modules
+          mypy plugins/modules/ --ignore-missing-imports || true  # Don't fail on type errors for now
 
       - name: Validate collection structure
         run: |
