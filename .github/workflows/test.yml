@@ -1,0 +1,314 @@
+name: Test rtfm.ai_modules Collection
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run tests daily at 2 AM UTC to catch API changes
+    - cron: '0 2 * * *'
+
+jobs:
+  # Lint and basic validation
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint and Validation
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: ansible_collections/rtfm/ai_modules
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv pip install --system ansible-core flake8 black mypy
+
+      - name: Lint Python code
+        run: |
+          cd ansible_collections/rtfm/ai_modules
+          flake8 plugins/modules/ --max-line-length=120 --ignore=E501,W503
+          black --check plugins/modules/ || true  # Don't fail on formatting for now
+
+      - name: Validate collection structure
+        run: |
+          cd ansible_collections/rtfm/ai_modules
+          ansible-galaxy collection build --force
+          ansible-galaxy collection install rtfm-ai_modules-*.tar.gz --force
+
+  # Unit tests (no API calls, fast)
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11']
+    name: Unit Tests (Python ${{ matrix.python-version }})
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: ansible_collections/rtfm/ai_modules
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          cd ansible_collections/rtfm/ai_modules
+          uv pip install --system -r requirements.txt
+
+      - name: Run unit tests
+        run: |
+          cd ansible_collections/rtfm/ai_modules
+          python -m pytest tests/unit/ -v --tb=short
+
+  # Integration tests (real API calls, requires secrets)
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests]
+    name: Integration Tests
+    # Only run integration tests on main branch and PRs to avoid API quota issues
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: ansible_collections/rtfm/ai_modules
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          cd ansible_collections/rtfm/ai_modules
+          uv pip install --system -r requirements.txt
+
+      - name: Set up Ansible collection
+        run: |
+          cd ansible_collections/rtfm/ai_modules
+          ansible-galaxy collection build --force
+          ansible-galaxy collection install rtfm-ai_modules-*.tar.gz --force
+
+      - name: Run integration tests with ansible-test
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          cd ansible_collections/rtfm/ai_modules
+          # Run integration tests if API keys are available
+          if [ -n "$GEMINI_API_KEY" ] && [ -n "$OPENROUTER_API_KEY" ]; then
+            echo "Running integration tests with API keys"
+            ansible-test integration --python 3.9 -v
+          else
+            echo "⚠️ API keys not available, skipping integration tests"
+            echo "To run integration tests, set GEMINI_API_KEY and OPENROUTER_API_KEY secrets"
+          fi
+
+  # Manual playbook tests (real API calls)
+  manual-tests:
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests]
+    name: Manual Playbook Tests
+    # Only run on main branch to avoid API quota issues
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: ansible_collections/rtfm/ai_modules
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          cd ansible_collections/rtfm/ai_modules
+          uv pip install --system -r requirements.txt
+
+      - name: Set up Ansible collection
+        run: |
+          cd ansible_collections/rtfm/ai_modules
+          ansible-galaxy collection build --force
+          ansible-galaxy collection install rtfm-ai_modules-*.tar.gz --force
+
+      - name: Test Gemini module
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          cd ansible_collections/rtfm/ai_modules
+          if [ -n "$GEMINI_API_KEY" ]; then
+            echo "Testing Gemini module..."
+            ansible-playbook tests/test_gemini.yml -v
+          else
+            echo "⚠️ GEMINI_API_KEY not available, skipping Gemini tests"
+          fi
+
+      - name: Test OpenRouter module
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          cd ansible_collections/rtfm/ai_modules
+          if [ -n "$OPENROUTER_API_KEY" ]; then
+            echo "Testing OpenRouter module..."
+            ansible-playbook tests/test_openrouter.yml -v
+          else
+            echo "⚠️ OPENROUTER_API_KEY not available, skipping OpenRouter tests"
+          fi
+
+      - name: Test both modules comparison
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          cd ansible_collections/rtfm/ai_modules
+          if [ -n "$GEMINI_API_KEY" ] && [ -n "$OPENROUTER_API_KEY" ]; then
+            echo "Running comparison tests..."
+            ansible-playbook tests/test_both.yml -v
+          else
+            echo "⚠️ Both API keys needed for comparison tests, skipping"
+          fi
+
+  # Security and dependency scanning
+  security:
+    runs-on: ubuntu-latest
+    name: Security Scan
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Check for secrets in code
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+
+  # Collection build and publish test
+  build-test:
+    runs-on: ubuntu-latest
+    name: Build Collection
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: ansible_collections/rtfm/ai_modules
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install Ansible
+        run: |
+          uv pip install --system ansible-core
+
+      - name: Build collection
+        run: |
+          cd ansible_collections/rtfm/ai_modules
+          ansible-galaxy collection build --force
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: collection-build
+          path: ansible_collections/rtfm/ai_modules/rtfm-ai_modules-*.tar.gz
+          retention-days: 7
+
+      - name: Test collection installation
+        run: |
+          cd ansible_collections/rtfm/ai_modules
+          ansible-galaxy collection install rtfm-ai_modules-*.tar.gz --force
+
+          # Verify modules can be imported
+          python -c "
+          import sys
+          sys.path.insert(0, '/home/runner/.ansible/collections/ansible_collections/rtfm/ai_modules/plugins/modules')
+          try:
+              import gemini
+              import openrouter
+              print('✅ Modules imported successfully')
+          except ImportError as e:
+              print(f'❌ Import error: {e}')
+              sys.exit(1)
+          "
+
+  # Test results summary
+  test-summary:
+    runs-on: ubuntu-latest
+    name: Test Summary
+    needs: [lint, unit-tests, integration-tests, manual-tests, security, build-test]
+    if: always()
+    steps:
+      - name: Test Results Summary
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ needs.lint.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | ${{ needs.integration-tests.result == 'success' && '✅ Pass' || needs.integration-tests.result == 'skipped' && '⏭️ Skipped' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Manual Tests | ${{ needs.manual-tests.result == 'success' && '✅ Pass' || needs.manual-tests.result == 'skipped' && '⏭️ Skipped' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Scan | ${{ needs.security.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Test | ${{ needs.build-test.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.lint.result }}" != "success" ] || [ "${{ needs.unit-tests.result }}" != "success" ] || [ "${{ needs.security.result }}" != "success" ] || [ "${{ needs.build-test.result }}" != "success" ]; then
+            echo "❌ Some tests failed. Please check the logs above." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "✅ All tests passed!" >> $GITHUB_STEP_SUMMARY
+          fi

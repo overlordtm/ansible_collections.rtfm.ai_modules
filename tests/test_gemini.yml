@@ -1,0 +1,103 @@
+---
+- name: Test Gemini Module
+  hosts: localhost
+  gather_facts: no
+  vars:
+    gemini_api_key: "{{ lookup('env', 'GEMINI_API_KEY') }}"
+    test_prompt: "What is the capital of France? Answer in one word."
+
+  tasks:
+    - name: Check if Gemini API key is set
+      fail:
+        msg: "GEMINI_API_KEY environment variable is not set"
+      when: gemini_api_key | length == 0
+
+    - name: Test basic Gemini functionality
+      rtfm.ai_modules.gemini:
+        api_key: "{{ gemini_api_key }}"
+        prompt: "{{ test_prompt }}"
+        model_name: "gemini-1.5-flash-latest"
+        temperature: 0.1
+        max_output_tokens: 10
+      register: basic_test
+
+    - name: Display basic test result
+      debug:
+        msg: "Response: {{ basic_test.result.text }}"
+
+    - name: Test with system context
+      rtfm.ai_modules.gemini:
+        api_key: "{{ gemini_api_key }}"
+        prompt: "Analyze this log entry for security issues: [INFO] User login successful for admin@example.com"
+        model_name: "gemini-1.5-flash-latest"
+        temperature: 0.5
+        max_output_tokens: 100
+      register: context_test
+
+    - name: Display context test result
+      debug:
+        msg: "Security analysis: {{ context_test.result.text }}"
+
+    - name: Test raw JSON output
+      rtfm.ai_modules.gemini:
+        api_key: "{{ gemini_api_key }}"
+        prompt: "List 3 colors"
+        model_name: "gemini-1.5-flash-latest"
+        temperature: 0.3
+        raw_json_output: true
+      register: raw_test
+
+    - name: Display raw response structure
+      debug:
+        var: raw_test.raw_response
+
+    - name: Test with safety settings
+      rtfm.ai_modules.gemini:
+        api_key: "{{ gemini_api_key }}"
+        prompt: "What are some common network security best practices?"
+        model_name: "gemini-1.5-flash-latest"
+        temperature: 0.7
+        max_output_tokens: 200
+        safety_settings:
+          HARM_CATEGORY_HARASSMENT: BLOCK_ONLY_HIGH
+          HARM_CATEGORY_HATE_SPEECH: BLOCK_MEDIUM_AND_ABOVE
+      register: safety_test
+
+    - name: Display safety test result
+      debug:
+        msg: "Security best practices: {{ safety_test.result.text }}"
+
+    - name: Test error handling - invalid model
+      rtfm.ai_modules.gemini:
+        api_key: "{{ gemini_api_key }}"
+        prompt: "Hello"
+        model_name: "invalid-model-name"
+      register: error_test
+      ignore_errors: yes
+
+    - name: Display error handling result
+      debug:
+        msg: "Error test result: {{ error_test.msg if error_test.failed else 'Unexpected success' }}"
+
+    - name: Test parameter validation - temperature out of range
+      rtfm.ai_modules.gemini:
+        api_key: "{{ gemini_api_key }}"
+        prompt: "Hello"
+        temperature: 2.5
+      register: validation_test
+      ignore_errors: yes
+
+    - name: Display validation test result
+      debug:
+        msg: "Validation test: {{ validation_test.msg if validation_test.failed else 'Unexpected success' }}"
+
+    - name: Summary of all tests
+      debug:
+        msg: |
+          Test Results Summary:
+          - Basic functionality: {{ 'PASS' if basic_test.result.text is defined else 'FAIL' }}
+          - Context analysis: {{ 'PASS' if context_test.result.text is defined else 'FAIL' }}
+          - Raw JSON output: {{ 'PASS' if raw_test.raw_response is defined else 'FAIL' }}
+          - Safety settings: {{ 'PASS' if safety_test.result.text is defined else 'FAIL' }}
+          - Error handling: {{ 'PASS' if error_test.failed else 'FAIL' }}
+          - Parameter validation: {{ 'PASS' if validation_test.failed else 'FAIL' }}

@@ -1,0 +1,21 @@
+namespace: rtfm
+name: ai_modules
+version: 0.0.1
+readme: README.md
+authors:
+  - Andraz Vrhovec <andraz@rtfm.si>
+description: Ansible modules for interacting with AI APIs
+license:
+  - MIT
+tags:
+  - ai
+  - api
+  - gemini
+  - chatgpt
+  - claude
+  - openrouter
+dependencies: {}
+repository: https://github.com/overlordtm/ansible-ai-modules
+documentation: https://github.com/overlordtm/ansible-ai-modules
+homepage: https://github.com/overlordtm/ansible-ai-modules
+issues: https://github.com/overlordtm/ansible-ai-modules/issues

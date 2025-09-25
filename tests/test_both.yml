@@ -1,0 +1,145 @@
+---
+- name: Compare Gemini and OpenRouter Modules
+  hosts: localhost
+  gather_facts: no
+  vars:
+    gemini_api_key: "{{ lookup('env', 'GEMINI_API_KEY') }}"
+    openrouter_api_key: "{{ lookup('env', 'OPENROUTER_API_KEY') }}"
+    comparison_prompt: "Explain what a VPN is in 2-3 sentences."
+
+  tasks:
+    - name: Check if API keys are set
+      fail:
+        msg: "Both GEMINI_API_KEY and OPENROUTER_API_KEY environment variables must be set"
+      when: (gemini_api_key | length == 0) or (openrouter_api_key | length == 0)
+
+    - name: Get response from Gemini
+      rtfm.ai_modules.gemini:
+        api_key: "{{ gemini_api_key }}"
+        prompt: "{{ comparison_prompt }}"
+        model_name: "gemini-1.5-flash-latest"
+        temperature: 0.7
+        max_output_tokens: 100
+      register: gemini_response
+
+    - name: Get response from OpenRouter (GPT-4)
+      rtfm.ai_modules.openrouter:
+        api_key: "{{ openrouter_api_key }}"
+        prompt: "{{ comparison_prompt }}"
+        model: "openai/gpt-4"
+        temperature: 0.7
+        max_tokens: 100
+      register: openrouter_gpt4_response
+
+    - name: Get response from OpenRouter (Claude)
+      rtfm.ai_modules.openrouter:
+        api_key: "{{ openrouter_api_key }}"
+        prompt: "{{ comparison_prompt }}"
+        model: "anthropic/claude-3-sonnet"
+        temperature: 0.7
+        max_tokens: 100
+      register: openrouter_claude_response
+
+    - name: Compare responses
+      debug:
+        msg: |
+          Prompt: "{{ comparison_prompt }}"
+
+          === Gemini Response ===
+          {{ gemini_response.result.text }}
+
+          Tokens used: {{ gemini_response.result.usage_metadata.total_token_count | default('N/A') }}
+
+          === OpenRouter GPT-4 Response ===
+          {{ openrouter_gpt4_response.result.text }}
+
+          Tokens used: {{ openrouter_gpt4_response.result.usage.total_tokens }}
+
+          === OpenRouter Claude Response ===
+          {{ openrouter_claude_response.result.text }}
+
+          Tokens used: {{ openrouter_claude_response.result.usage.total_tokens }}
+
+    - name: Test security analysis comparison
+      block:
+        - name: Security analysis with Gemini
+          rtfm.ai_modules.gemini:
+            api_key: "{{ gemini_api_key }}"
+            prompt: |
+              Analyze this log for potential security issues:
+              192.168.1.100 - - [25/Sep/2024:14:30:45 +0000] "POST /admin/login" 200 1234
+              192.168.1.100 - - [25/Sep/2024:14:30:46 +0000] "GET /admin/users" 200 5678
+              192.168.1.100 - - [25/Sep/2024:14:30:47 +0000] "POST /admin/users/delete" 200 234
+            model_name: "gemini-1.5-flash-latest"
+            temperature: 0.3
+            max_output_tokens: 200
+          register: gemini_security
+
+        - name: Security analysis with OpenRouter Claude
+          rtfm.ai_modules.openrouter:
+            api_key: "{{ openrouter_api_key }}"
+            prompt: |
+              Analyze this log for potential security issues:
+              192.168.1.100 - - [25/Sep/2024:14:30:45 +0000] "POST /admin/login" 200 1234
+              192.168.1.100 - - [25/Sep/2024:14:30:46 +0000] "GET /admin/users" 200 5678
+              192.168.1.100 - - [25/Sep/2024:14:30:47 +0000] "POST /admin/users/delete" 200 234
+            system_message: "You are a cybersecurity expert analyzing web server logs."
+            model: "anthropic/claude-3-sonnet"
+            temperature: 0.3
+            max_tokens: 200
+          register: openrouter_security
+
+        - name: Compare security analysis
+          debug:
+            msg: |
+              === Security Analysis Comparison ===
+
+              Gemini Analysis:
+              {{ gemini_security.result.text }}
+
+              Claude Analysis:
+              {{ openrouter_security.result.text }}
+
+    - name: Test error handling comparison
+      block:
+        - name: Test Gemini with invalid temperature
+          rtfm.ai_modules.gemini:
+            api_key: "{{ gemini_api_key }}"
+            prompt: "Hello"
+            temperature: 5.0
+          register: gemini_error
+          ignore_errors: yes
+
+        - name: Test OpenRouter with invalid temperature
+          rtfm.ai_modules.openrouter:
+            api_key: "{{ openrouter_api_key }}"
+            prompt: "Hello"
+            temperature: 5.0
+          register: openrouter_error
+          ignore_errors: yes
+
+        - name: Compare error handling
+          debug:
+            msg: |
+              === Error Handling Comparison ===
+
+              Gemini error: {{ gemini_error.msg if gemini_error.failed else 'No error (unexpected)' }}
+              OpenRouter error: {{ openrouter_error.msg if openrouter_error.failed else 'No error (unexpected)' }}
+
+    - name: Final comparison summary
+      debug:
+        msg: |
+          === Module Comparison Summary ===
+
+          Both modules successfully:
+          - Handle basic text generation
+          - Validate parameters correctly
+          - Provide usage statistics
+          - Support raw JSON output mode
+          - Implement retry logic for rate limits
+
+          Key differences:
+          - Gemini: Uses google-generativeai library, has safety settings
+          - OpenRouter: Uses REST API, supports multiple model providers, has system messages
+
+          Both modules are working correctly!

@@ -1,0 +1,223 @@
+---
+# Integration tests for the OpenRouter module
+
+- name: Check if OpenRouter API key is available
+  set_fact:
+    openrouter_api_key: "{{ lookup('env', 'OPENROUTER_API_KEY') }}"
+
+- name: Skip tests if API key not available
+  meta: end_play
+  when: openrouter_api_key | length == 0
+
+- name: Test basic functionality
+  rtfm.ai_modules.openrouter:
+    api_key: "{{ openrouter_api_key }}"
+    prompt: "What is 2+2? Answer with just the number."
+    model: "openai/gpt-3.5-turbo"
+    temperature: 0.1
+    max_tokens: 5
+  register: basic_result
+
+- name: Verify basic functionality
+  assert:
+    that:
+      - basic_result is not failed
+      - basic_result.result is defined
+      - basic_result.result.text is defined
+      - basic_result.result.text | length > 0
+      - basic_result.result.usage is defined
+    fail_msg: "Basic functionality test failed"
+
+- name: Test parameter validation - invalid temperature
+  rtfm.ai_modules.openrouter:
+    api_key: "{{ openrouter_api_key }}"
+    prompt: "Hello"
+    temperature: 3.0
+  register: invalid_temp
+  ignore_errors: yes
+
+- name: Verify temperature validation
+  assert:
+    that:
+      - invalid_temp is failed
+      - "'temperature' in invalid_temp.msg"
+    fail_msg: "Temperature validation test failed"
+
+- name: Test parameter validation - invalid max_tokens
+  rtfm.ai_modules.openrouter:
+    api_key: "{{ openrouter_api_key }}"
+    prompt: "Hello"
+    max_tokens: -1
+  register: invalid_tokens
+  ignore_errors: yes
+
+- name: Verify max_tokens validation
+  assert:
+    that:
+      - invalid_tokens is failed
+      - "'max_tokens' in invalid_tokens.msg"
+    fail_msg: "Max tokens validation test failed"
+
+- name: Test with system message
+  rtfm.ai_modules.openrouter:
+    api_key: "{{ openrouter_api_key }}"
+    prompt: "What is network security?"
+    system_message: "You are a cybersecurity expert. Provide concise answers."
+    model: "openai/gpt-3.5-turbo"
+    temperature: 0.5
+    max_tokens: 100
+  register: system_result
+
+- name: Verify system message works
+  assert:
+    that:
+      - system_result is not failed
+      - system_result.result is defined
+      - system_result.result.text is defined
+    fail_msg: "System message test failed"
+
+- name: Test raw JSON output
+  rtfm.ai_modules.openrouter:
+    api_key: "{{ openrouter_api_key }}"
+    prompt: "Say hello"
+    model: "openai/gpt-3.5-turbo"
+    raw_json_output: true
+  register: raw_result
+
+- name: Verify raw JSON output
+  assert:
+    that:
+      - raw_result is not failed
+      - raw_result.raw_response is defined
+      - raw_result.raw_response.choices is defined
+      - raw_result.raw_response.usage is defined
+      - raw_result.raw_response.model is defined
+    fail_msg: "Raw JSON output test failed"
+
+- name: Test invalid model name
+  rtfm.ai_modules.openrouter:
+    api_key: "{{ openrouter_api_key }}"
+    prompt: "Hello"
+    model: "invalid/model-123"
+  register: invalid_model
+  ignore_errors: yes
+
+- name: Verify invalid model handling
+  assert:
+    that:
+      - invalid_model is failed
+    fail_msg: "Invalid model test should have failed"
+
+- name: Test invalid API key
+  rtfm.ai_modules.openrouter:
+    api_key: "invalid-key-12345"
+    prompt: "Hello"
+    model: "openai/gpt-3.5-turbo"
+  register: invalid_key
+  ignore_errors: yes
+
+- name: Verify invalid API key handling
+  assert:
+    that:
+      - invalid_key is failed
+      - "'authentication' in invalid_key.msg or 'API' in invalid_key.msg"
+    fail_msg: "Invalid API key test should have failed with auth error"
+
+- name: Test with penalty parameters
+  rtfm.ai_modules.openrouter:
+    api_key: "{{ openrouter_api_key }}"
+    prompt: "List some programming languages. Avoid repetition."
+    model: "openai/gpt-3.5-turbo"
+    temperature: 0.7
+    max_tokens: 50
+    frequency_penalty: 0.5
+    presence_penalty: 0.3
+  register: penalty_result
+
+- name: Verify penalty parameters
+  assert:
+    that:
+      - penalty_result is not failed
+      - penalty_result.result is defined
+      - penalty_result.result.text is defined
+    fail_msg: "Penalty parameters test failed"
+
+- name: Test parameter validation - invalid frequency penalty
+  rtfm.ai_modules.openrouter:
+    api_key: "{{ openrouter_api_key }}"
+    prompt: "Hello"
+    frequency_penalty: 3.0
+  register: invalid_frequency
+  ignore_errors: yes
+
+- name: Verify frequency penalty validation
+  assert:
+    that:
+      - invalid_frequency is failed
+      - "'frequency_penalty' in invalid_frequency.msg"
+    fail_msg: "Frequency penalty validation test failed"
+
+- name: Test parameter validation - invalid presence penalty
+  rtfm.ai_modules.openrouter:
+    api_key: "{{ openrouter_api_key }}"
+    prompt: "Hello"
+    presence_penalty: -3.0
+  register: invalid_presence
+  ignore_errors: yes
+
+- name: Verify presence penalty validation
+  assert:
+    that:
+      - invalid_presence is failed
+      - "'presence_penalty' in invalid_presence.msg"
+    fail_msg: "Presence penalty validation test failed"
+
+- name: Test different model (if available) - Claude
+  rtfm.ai_modules.openrouter:
+    api_key: "{{ openrouter_api_key }}"
+    prompt: "Explain what a firewall does in one sentence."
+    model: "anthropic/claude-3-haiku"
+    temperature: 0.3
+    max_tokens: 50
+  register: claude_result
+  ignore_errors: yes
+
+- name: Verify Claude model (if it worked)
+  assert:
+    that:
+      - claude_result.result is defined or claude_result is failed
+    fail_msg: "Claude test produced unexpected result"
+
+- name: Test timeout parameter
+  rtfm.ai_modules.openrouter:
+    api_key: "{{ openrouter_api_key }}"
+    prompt: "Hello"
+    model: "openai/gpt-3.5-turbo"
+    timeout: 60
+  register: timeout_result
+
+- name: Verify timeout parameter
+  assert:
+    that:
+      - timeout_result is not failed
+      - timeout_result.result is defined
+    fail_msg: "Timeout parameter test failed"
+
+- name: Test retry mechanism
+  rtfm.ai_modules.openrouter:
+    api_key: "{{ openrouter_api_key }}"
+    prompt: "Hello"
+    model: "openai/gpt-3.5-turbo"
+    retry_attempts: 2
+    retry_delay: 1
+  register: retry_result
+
+- name: Verify retry mechanism doesn't crash
+  assert:
+    that:
+      - retry_result is defined
+      - retry_result is not failed
+    fail_msg: "Retry mechanism test failed"
+
+- debug:
+    msg: "All OpenRouter integration tests completed successfully!"

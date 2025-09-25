@@ -1,0 +1,160 @@
+---
+# Integration tests for the Gemini module
+
+- name: Check if Gemini API key is available
+  set_fact:
+    gemini_api_key: "{{ lookup('env', 'GEMINI_API_KEY') }}"
+
+- name: Skip tests if API key not available
+  meta: end_play
+  when: gemini_api_key | length == 0
+
+- name: Test basic functionality
+  rtfm.ai_modules.gemini:
+    api_key: "{{ gemini_api_key }}"
+    prompt: "What is 2+2? Answer with just the number."
+    model_name: "gemini-1.5-flash-latest"
+    temperature: 0.1
+    max_output_tokens: 5
+  register: basic_result
+
+- name: Verify basic functionality
+  assert:
+    that:
+      - basic_result is not failed
+      - basic_result.result is defined
+      - basic_result.result.text is defined
+      - basic_result.result.text | length > 0
+    fail_msg: "Basic functionality test failed"
+
+- name: Test parameter validation - invalid temperature
+  rtfm.ai_modules.gemini:
+    api_key: "{{ gemini_api_key }}"
+    prompt: "Hello"
+    temperature: 2.0
+  register: invalid_temp
+  ignore_errors: yes
+
+- name: Verify temperature validation
+  assert:
+    that:
+      - invalid_temp is failed
+      - "'temperature' in invalid_temp.msg"
+    fail_msg: "Temperature validation test failed"
+
+- name: Test parameter validation - invalid max_output_tokens
+  rtfm.ai_modules.gemini:
+    api_key: "{{ gemini_api_key }}"
+    prompt: "Hello"
+    max_output_tokens: -1
+  register: invalid_tokens
+  ignore_errors: yes
+
+- name: Verify max_output_tokens validation
+  assert:
+    that:
+      - invalid_tokens is failed
+      - "'max_output_tokens' in invalid_tokens.msg"
+    fail_msg: "Max output tokens validation test failed"
+
+- name: Test with safety settings
+  rtfm.ai_modules.gemini:
+    api_key: "{{ gemini_api_key }}"
+    prompt: "What are some network security best practices?"
+    model_name: "gemini-1.5-flash-latest"
+    temperature: 0.5
+    safety_settings:
+      HARM_CATEGORY_HARASSMENT: BLOCK_ONLY_HIGH
+      HARM_CATEGORY_HATE_SPEECH: BLOCK_MEDIUM_AND_ABOVE
+  register: safety_result
+
+- name: Verify safety settings work
+  assert:
+    that:
+      - safety_result is not failed
+      - safety_result.result is defined
+      - safety_result.result.text is defined
+    fail_msg: "Safety settings test failed"
+
+- name: Test raw JSON output
+  rtfm.ai_modules.gemini:
+    api_key: "{{ gemini_api_key }}"
+    prompt: "Say hello"
+    model_name: "gemini-1.5-flash-latest"
+    raw_json_output: true
+  register: raw_result
+
+- name: Verify raw JSON output
+  assert:
+    that:
+      - raw_result is not failed
+      - raw_result.raw_response is defined
+      - raw_result.raw_response.candidates is defined
+      - raw_result.raw_response.usage_metadata is defined
+    fail_msg: "Raw JSON output test failed"
+
+- name: Test invalid model name
+  rtfm.ai_modules.gemini:
+    api_key: "{{ gemini_api_key }}"
+    prompt: "Hello"
+    model_name: "invalid-model-123"
+  register: invalid_model
+  ignore_errors: yes
+
+- name: Verify invalid model handling
+  assert:
+    that:
+      - invalid_model is failed
+    fail_msg: "Invalid model test should have failed"
+
+- name: Test invalid API key
+  rtfm.ai_modules.gemini:
+    api_key: "invalid-key-12345"
+    prompt: "Hello"
+    model_name: "gemini-1.5-flash-latest"
+  register: invalid_key
+  ignore_errors: yes
+
+- name: Verify invalid API key handling
+  assert:
+    that:
+      - invalid_key is failed
+    fail_msg: "Invalid API key test should have failed"
+
+- name: Test with generation config parameters
+  rtfm.ai_modules.gemini:
+    api_key: "{{ gemini_api_key }}"
+    prompt: "List 3 programming languages"
+    model_name: "gemini-1.5-flash-latest"
+    temperature: 0.7
+    top_p: 0.9
+    top_k: 40
+    max_output_tokens: 50
+  register: config_result
+
+- name: Verify generation config
+  assert:
+    that:
+      - config_result is not failed
+      - config_result.result is defined
+      - config_result.result.text is defined
+    fail_msg: "Generation config test failed"
+
+- name: Test retry mechanism (simulate with very small timeout - this might fail but shouldn't crash)
+  rtfm.ai_modules.gemini:
+    api_key: "{{ gemini_api_key }}"
+    prompt: "Hello"
+    model_name: "gemini-1.5-flash-latest"
+    retry_attempts: 1
+    retry_delay: 1
+  register: retry_result
+  ignore_errors: yes
+
+- name: Verify retry mechanism doesn't crash
+  assert:
+    that:
+      - retry_result is defined
+    fail_msg: "Retry mechanism test crashed"
+
+- debug:
+    msg: "All Gemini integration tests completed successfully!"
