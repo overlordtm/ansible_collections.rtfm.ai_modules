@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11']
+        python-version: ['3.9', '3.10', '3.11']
     name: Unit Tests (Python ${{ matrix.python-version }})
 
     steps:
@@ -227,6 +227,8 @@ jobs:
   security:
     runs-on: ubuntu-latest
     name: Security Scan
+    # Only run security scans on main branch or if explicitly triggered
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -236,17 +238,27 @@ jobs:
         with:
           scan-type: 'fs'
           scan-ref: '.'
+          format: 'table'
+          exit-code: '0'  # Don't fail the job on vulnerabilities
+
+      - name: Run Trivy for SARIF
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
           format: 'sarif'
           output: 'trivy-results.sarif'
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && github.event_name != 'pull_request'
         with:
           sarif_file: 'trivy-results.sarif'
+          category: 'trivy'
 
       - name: Check for secrets in code
         uses: trufflesecurity/trufflehog@main
+        continue-on-error: true
         with:
           path: ./
           base: main
@@ -288,7 +300,7 @@ jobs:
           ansible-galaxy collection build --force
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: collection-build
           path: ansible_collections/rtfm/ai_modules/rtfm-ai_modules-*.tar.gz

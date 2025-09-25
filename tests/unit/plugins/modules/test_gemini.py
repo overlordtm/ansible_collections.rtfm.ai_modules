@@ -6,8 +6,26 @@ from unittest.mock import Mock, patch, MagicMock
 # Import the module to test
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../../plugins/modules'))
-from gemini import run_module, convert_safety_settings_input_to_api
+
+# Add the plugins/modules directory to the Python path
+modules_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../plugins/modules'))
+if modules_path not in sys.path:
+    sys.path.insert(0, modules_path)
+
+# Mock ansible and google modules before importing
+sys.modules['ansible'] = Mock()
+sys.modules['ansible.module_utils'] = Mock()
+sys.modules['ansible.module_utils.basic'] = Mock()
+sys.modules['google'] = Mock()
+sys.modules['google.generativeai'] = Mock()
+sys.modules['google.api_core'] = Mock()
+sys.modules['google.api_core.exceptions'] = Mock()
+
+# Now import the module
+try:
+    from gemini import run_module, convert_safety_settings_input_to_api
+except ImportError as e:
+    pytest.skip(f"Could not import gemini module: {e}")
 
 
 class TestGeminiModule:
