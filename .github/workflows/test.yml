@@ -216,6 +216,9 @@ jobs:
     name: Security Scan
     # Only run security scans on main branch or if explicitly triggered
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      security-events: write  # Required for uploading SARIF results
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -239,6 +242,7 @@ jobs:
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         if: always() && github.event_name != 'pull_request'
+        continue-on-error: true  # Don't fail if SARIF upload has permission issues
         with:
           sarif_file: 'trivy-results.sarif'
           category: 'trivy'
