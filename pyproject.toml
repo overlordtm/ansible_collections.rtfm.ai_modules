@@ -1,8 +1,34 @@
 [tool.ruff]
-# Ruff configuration for rtfm.ai_modules collection
+# Same as Black.
+line-length = 120
+target-version = "py38"
 
-# Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
-# Add other rule sets as needed
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+[tool.ruff.lint]
 select = [
     "E",     # pycodestyle errors
     "W",     # pycodestyle warnings
@@ -32,38 +58,6 @@ ignore = [
 fixable = ["ALL"]
 unfixable = []
 
-# Exclude a variety of commonly ignored directories.
-exclude = [
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".git-rewrite",
-    ".hg",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".pytype",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
-    ".venv",
-    "__pypackages__",
-    "_build",
-    "buck-out",
-    "build",
-    "dist",
-    "node_modules",
-    "venv",
-]
-
-# Same as Black.
-line-length = 120
-indent-width = 4
-
-# Assume Python 3.8+
-target-version = "py38"
-
 [tool.ruff.format]
 # Like Black, use double quotes for strings.
 quote-style = "double"
@@ -71,11 +65,12 @@ quote-style = "double"
 # Like Black, indent with spaces, rather than tabs.
 indent-style = "space"
 
+# Line length for formatter
+line-ending = "auto"
+
 # Like Black, respect magic trailing commas.
 skip-magic-trailing-comma = false
 
-# Like Black, automatically detect the appropriate line ending.
-line-ending = "auto"
 
 # Enable auto-formatting of code examples in docstrings.
 docstring-code-format = true
@@ -91,7 +86,7 @@ max-line-length = 120
 
 [tool.mypy]
 # MyPy configuration for type checking
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = false
 warn_unused_configs = true
 disallow_untyped_defs = false  # Too strict for Ansible modules

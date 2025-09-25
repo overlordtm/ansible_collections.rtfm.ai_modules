@@ -6,7 +6,6 @@
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 
-
 DOCUMENTATION = r"""
 ---
 module: gemini
@@ -289,9 +288,7 @@ def convert_safety_settings_input_to_api(safety_settings_input):
                     msg=f"Invalid safety category ('{key}') or threshold ('{value}'). Check Google AI documentation for valid values. Error: {e}"
                 )
             except Exception as e:
-                module.fail_json(
-                    msg=f"Unexpected error processing safety setting '{key}': {str(e)}"
-                )
+                module.fail_json(msg=f"Unexpected error processing safety setting '{key}': {str(e)}")
     return safety_settings_api
 
 
@@ -304,17 +301,12 @@ def convert_prompt_feedback_to_dict(prompt_feedback_obj):
     # block_reason is an enum, get its name string
     if hasattr(prompt_feedback_obj, "block_reason"):
         feedback_dict["block_reason"] = (
-            prompt_feedback_obj.block_reason.name
-            if prompt_feedback_obj.block_reason
-            else None
+            prompt_feedback_obj.block_reason.name if prompt_feedback_obj.block_reason else None
         )
 
     # safety_ratings is a list of SafetyRating objects; convert each to dict
     safety_ratings_list = []
-    if (
-        hasattr(prompt_feedback_obj, "safety_ratings")
-        and prompt_feedback_obj.safety_ratings
-    ):
+    if hasattr(prompt_feedback_obj, "safety_ratings") and prompt_feedback_obj.safety_ratings:
         for rating in prompt_feedback_obj.safety_ratings:
             # SafetyRating objects usually have a to_dict() method or similar
             if hasattr(rating, "to_dict"):
@@ -327,30 +319,20 @@ def convert_prompt_feedback_to_dict(prompt_feedback_obj):
                     # Fallback attempt manual conversion
                     rating_dict = {}
                     if hasattr(rating, "category"):
-                        rating_dict["category"] = (
-                            rating.category.name if rating.category else None
-                        )
+                        rating_dict["category"] = rating.category.name if rating.category else None
                     if hasattr(rating, "probability"):
-                        rating_dict["probability"] = (
-                            rating.probability.name if rating.probability else None
-                        )
+                        rating_dict["probability"] = rating.probability.name if rating.probability else None
                     if hasattr(rating, "blocked"):
                         rating_dict["blocked"] = rating.blocked
                     safety_ratings_list.append(rating_dict)
             else:
-                module.warn(
-                    "SafetyRating object has no .to_dict() method."
-                )  # Use module.warn
+                module.warn("SafetyRating object has no .to_dict() method.")  # Use module.warn
                 # Manual conversion if no to_dict()
                 rating_dict = {}
                 if hasattr(rating, "category"):
-                    rating_dict["category"] = (
-                        rating.category.name if rating.category else None
-                    )
+                    rating_dict["category"] = rating.category.name if rating.category else None
                 if hasattr(rating, "probability"):
-                    rating_dict["probability"] = (
-                        rating.probability.name if rating.probability else None
-                    )
+                    rating_dict["probability"] = rating.probability.name if rating.probability else None
                 if hasattr(rating, "blocked"):
                     rating_dict["blocked"] = rating.blocked
                 safety_ratings_list.append(rating_dict)
@@ -407,9 +389,7 @@ def convert_candidate_to_dict(candidate_obj):
 
     # finish_reason is an enum
     if hasattr(candidate_obj, "finish_reason"):
-        cand_dict["finish_reason"] = (
-            candidate_obj.finish_reason.name if candidate_obj.finish_reason else None
-        )
+        cand_dict["finish_reason"] = candidate_obj.finish_reason.name if candidate_obj.finish_reason else None
 
     # safety_ratings is a list of SafetyRating objects, convert each
     safety_ratings_list = []
@@ -419,46 +399,32 @@ def convert_candidate_to_dict(candidate_obj):
                 try:
                     safety_ratings_list.append(rating.to_dict())
                 except Exception as e:
-                    module.warn(
-                        f"Failed to convert SafetyRating in candidate to dict using .to_dict(): {e}"
-                    )
+                    module.warn(f"Failed to convert SafetyRating in candidate to dict using .to_dict(): {e}")
                     # Fallback attempt manual conversion
                     rating_dict = {}
                     if hasattr(rating, "category"):
-                        rating_dict["category"] = (
-                            rating.category.name if rating.category else None
-                        )
+                        rating_dict["category"] = rating.category.name if rating.category else None
                     if hasattr(rating, "probability"):
-                        rating_dict["probability"] = (
-                            rating.probability.name if rating.probability else None
-                        )
+                        rating_dict["probability"] = rating.probability.name if rating.probability else None
                     if hasattr(rating, "blocked"):
                         rating_dict["blocked"] = rating.blocked
                     safety_ratings_list.append(rating_dict)
 
             else:
-                module.warn(
-                    "SafetyRating object in candidate has no .to_dict() method."
-                )
+                module.warn("SafetyRating object in candidate has no .to_dict() method.")
                 # Manual conversion if no to_dict()
                 rating_dict = {}
                 if hasattr(rating, "category"):
-                    rating_dict["category"] = (
-                        rating.category.name if rating.category else None
-                    )
+                    rating_dict["category"] = rating.category.name if rating.category else None
                 if hasattr(rating, "probability"):
-                    rating_dict["probability"] = (
-                        rating.probability.name if rating.probability else None
-                    )
+                    rating_dict["probability"] = rating.probability.name if rating.probability else None
                 if hasattr(rating, "blocked"):
                     rating_dict["blocked"] = rating.blocked
                 safety_ratings_list.append(rating_dict)
 
     cand_dict["safety_ratings"] = safety_ratings_list  # Add the list even if empty
 
-    if hasattr(
-        candidate_obj, "token_count"
-    ):  # May not be present on all candidate objects
+    if hasattr(candidate_obj, "token_count"):  # May not be present on all candidate objects
         cand_dict["token_count"] = candidate_obj.token_count
     if hasattr(candidate_obj, "index"):
         cand_dict["index"] = candidate_obj.index
@@ -514,9 +480,7 @@ def run_module():
         module.fail_json(msg="Parameter 'temperature' must be between 0.0 and 1.0")
     if top_p is not None and not (0.0 <= top_p <= 1.0):
         module.fail_json(msg="Parameter 'top_p' must be between 0.0 and 1.0")
-    if (
-        top_k is not None and top_k is not None and top_k <= 0
-    ):  # Check is not None again for clarity
+    if top_k is not None and top_k is not None and top_k <= 0:  # Check is not None again for clarity
         module.fail_json(msg="Parameter 'top_k' must be a positive integer")
     if max_output_tokens is not None and max_output_tokens <= 0:
         module.fail_json(msg="Parameter 'max_output_tokens' must be a positive integer")
@@ -544,9 +508,7 @@ def run_module():
     if candidate_count is not None:
         gen_config_dict["candidate_count"] = candidate_count
 
-    generation_config = (
-        genai.types.GenerationConfig(**gen_config_dict) if gen_config_dict else None
-    )
+    generation_config = genai.types.GenerationConfig(**gen_config_dict) if gen_config_dict else None
 
     # --- Initialize Model ---
     try:
@@ -556,9 +518,7 @@ def run_module():
             safety_settings=safety_settings_api,  # Pass validated settings or []
         )
     except Exception as e:
-        module.fail_json(
-            msg=f"Failed to initialize Gemini model '{model_name}': {str(e)}"
-        )
+        module.fail_json(msg=f"Failed to initialize Gemini model '{model_name}': {str(e)}")
 
     # --- Call Gemini API with Retry Logic ---
     attempts = 0
@@ -572,21 +532,12 @@ def run_module():
             # --- Convert Response Objects to Dicts ---
             # Do this conversion regardless of raw_json_output, as helper functions
             # are useful and we might need converted parts even in default mode.
-            response_prompt_feedback = convert_prompt_feedback_to_dict(
-                getattr(response, "prompt_feedback", None)
-            )
-            response_usage_metadata = convert_usage_metadata_to_dict(
-                getattr(response, "usage_metadata", None)
-            )
-            response_candidates = [
-                convert_candidate_to_dict(c)
-                for c in getattr(response, "candidates", [])
-            ]
+            response_prompt_feedback = convert_prompt_feedback_to_dict(getattr(response, "prompt_feedback", None))
+            response_usage_metadata = convert_usage_metadata_to_dict(getattr(response, "usage_metadata", None))
+            response_candidates = [convert_candidate_to_dict(c) for c in getattr(response, "candidates", [])]
 
             # --- Handle Prompt Blocks ---
-            if response_prompt_feedback and response_prompt_feedback.get(
-                "block_reason"
-            ):
+            if response_prompt_feedback and response_prompt_feedback.get("block_reason"):
                 generation_error = f"Prompt blocked due to {response_prompt_feedback.get('block_reason')}. Safety Ratings: {response_prompt_feedback.get('safety_ratings')}"
                 # If prompt is blocked, we *always* fail the task, but include the feedback
                 fail_result = {
@@ -614,14 +565,10 @@ def run_module():
                     "MAX_TOKENS",
                     "SAFETY",
                 ):  # Added SAFETY finish reason
-                    candidate_errors.append(
-                        f"Candidate finished unexpectedly: {finish_reason}"
-                    )
+                    candidate_errors.append(f"Candidate finished unexpectedly: {finish_reason}")
                 elif finish_reason == "SAFETY":
                     # If finish_reason is SAFETY, check safety_ratings for details
-                    candidate_errors.append(
-                        "Candidate generation stopped due to safety reasons."
-                    )
+                    candidate_errors.append("Candidate generation stopped due to safety reasons.")
 
                 # Check safety ratings on the candidate for explicit blocks
                 candidate_safety_ratings = candidate_dict.get("safety_ratings", [])
@@ -629,13 +576,10 @@ def run_module():
                 for rating in candidate_safety_ratings:
                     # Check if the rating indicates a block
                     if (  # noqa: SIM102
-                        rating.get("probability")
-                        and rating.get("probability") != "NEGLIGIBLE"
+                        rating.get("probability") and rating.get("probability") != "NEGLIGIBLE"
                     ):
                         # More robust check using the 'blocked' flag if available
-                        if rating.get("blocked", False) or rating.get(
-                            "probability"
-                        ) in ("MEDIUM", "HIGH"):
+                        if rating.get("blocked", False) or rating.get("probability") in ("MEDIUM", "HIGH"):
                             candidate_errors.append(
                                 f"Candidate content blocked for {rating.get('category')} (Probability: {rating.get('probability')})."
                             )
@@ -657,9 +601,7 @@ def run_module():
                         )
                     except Exception as e:
                         # Catch unexpected errors during text access
-                        candidate_errors.append(
-                            f"Unexpected error extracting text: {str(e)}"
-                        )
+                        candidate_errors.append(f"Unexpected error extracting text: {str(e)}")
                 else:
                     # If content was blocked based on safety_ratings, text will be None
                     generated_text = None
@@ -742,9 +684,7 @@ def run_module():
                 continue
             else:
                 # Fail fast on auth errors, invalid args etc. not explicitly handled
-                module.fail_json(
-                    msg=f"Gemini API Error: {str(e)}", exception=traceback.format_exc()
-                )
+                module.fail_json(msg=f"Gemini API Error: {str(e)}", exception=traceback.format_exc())
 
         except Exception as e:
             # Catch-all for unexpected errors (e.g., library bugs, network issues not caught by google-api-core)
@@ -754,9 +694,7 @@ def run_module():
             )
 
     # This part should theoretically not be reached if exit_json or fail_json is always called
-    module.fail_json(
-        msg="Gemini module finished unexpectedly without success or specific failure."
-    )
+    module.fail_json(msg="Gemini module finished unexpectedly without success or specific failure.")
 
 
 def main():

@@ -6,7 +6,6 @@
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 
-
 DOCUMENTATION = r"""
 ---
 module: openrouter
@@ -259,41 +258,31 @@ def make_openrouter_request(api_key, payload, timeout, retry_attempts, retry_del
     while attempts <= retry_attempts:
         attempts += 1
         try:
-            response = requests.post(
-                url, headers=headers, json=payload, timeout=timeout
-            )
+            response = requests.post(url, headers=headers, json=payload, timeout=timeout)
 
             if response.status_code == 200:
                 return response.json()
             elif response.status_code == 429:  # Rate limit
                 if attempts > retry_attempts:
-                    module.fail_json(
-                        msg=f"OpenRouter API rate limit exceeded after {retry_attempts} retries"
-                    )
+                    module.fail_json(msg=f"OpenRouter API rate limit exceeded after {retry_attempts} retries")
                 module.warn(
                     f"Rate limit exceeded, retrying in {retry_delay} seconds... (Attempt {attempts}/{retry_attempts})"
                 )
                 time.sleep(retry_delay)
                 continue
             elif response.status_code == 401:
-                module.fail_json(
-                    msg="OpenRouter API authentication failed. Check your API key."
-                )
+                module.fail_json(msg="OpenRouter API authentication failed. Check your API key.")
             elif response.status_code == 400:
                 try:
                     error_data = response.json()
-                    error_msg = error_data.get("error", {}).get(
-                        "message", "Bad request"
-                    )
+                    error_msg = error_data.get("error", {}).get("message", "Bad request")
                 except:  # noqa: E722
                     error_msg = response.text
                 module.fail_json(msg=f"OpenRouter API bad request: {error_msg}")
             else:
                 try:
                     error_data = response.json()
-                    error_msg = error_data.get("error", {}).get(
-                        "message", f"HTTP {response.status_code}"
-                    )
+                    error_msg = error_data.get("error", {}).get("message", f"HTTP {response.status_code}")
                 except:  # noqa: E722
                     error_msg = f"HTTP {response.status_code}: {response.text}"
 
@@ -309,24 +298,16 @@ def make_openrouter_request(api_key, payload, timeout, retry_attempts, retry_del
         except requests.exceptions.Timeout as e:
             last_exception = e
             if attempts > retry_attempts:
-                module.fail_json(
-                    msg=f"OpenRouter API request timeout after {retry_attempts} retries: {str(e)}"
-                )
-            module.warn(
-                f"Request timeout, retrying in {retry_delay} seconds... (Attempt {attempts}/{retry_attempts})"
-            )
+                module.fail_json(msg=f"OpenRouter API request timeout after {retry_attempts} retries: {str(e)}")
+            module.warn(f"Request timeout, retrying in {retry_delay} seconds... (Attempt {attempts}/{retry_attempts})")
             time.sleep(retry_delay)
             continue
 
         except requests.exceptions.ConnectionError as e:
             last_exception = e
             if attempts > retry_attempts:
-                module.fail_json(
-                    msg=f"OpenRouter API connection error after {retry_attempts} retries: {str(e)}"
-                )
-            module.warn(
-                f"Connection error, retrying in {retry_delay} seconds... (Attempt {attempts}/{retry_attempts})"
-            )
+                module.fail_json(msg=f"OpenRouter API connection error after {retry_attempts} retries: {str(e)}")
+            module.warn(f"Connection error, retrying in {retry_delay} seconds... (Attempt {attempts}/{retry_attempts})")
             time.sleep(retry_delay)
             continue
 
@@ -362,9 +343,7 @@ def run_module():
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=False)
 
     if not HAS_REQUESTS:
-        module.fail_json(
-            msg="The 'requests' Python library is required. Please install it: pip install requests"
-        )
+        module.fail_json(msg="The 'requests' Python library is required. Please install it: pip install requests")
 
     # Get parameters
     api_key = module.params["api_key"]
@@ -389,13 +368,9 @@ def run_module():
     if max_tokens is not None and max_tokens <= 0:
         module.fail_json(msg="Parameter 'max_tokens' must be a positive integer")
     if frequency_penalty is not None and not (-2.0 <= frequency_penalty <= 2.0):
-        module.fail_json(
-            msg="Parameter 'frequency_penalty' must be between -2.0 and 2.0"
-        )
+        module.fail_json(msg="Parameter 'frequency_penalty' must be between -2.0 and 2.0")
     if presence_penalty is not None and not (-2.0 <= presence_penalty <= 2.0):
-        module.fail_json(
-            msg="Parameter 'presence_penalty' must be between -2.0 and 2.0"
-        )
+        module.fail_json(msg="Parameter 'presence_penalty' must be between -2.0 and 2.0")
     if timeout <= 0:
         module.fail_json(msg="Parameter 'timeout' must be a positive integer")
 
@@ -421,9 +396,7 @@ def run_module():
         payload["presence_penalty"] = presence_penalty
 
     # Make the API request
-    response_data = make_openrouter_request(
-        api_key, payload, timeout, retry_attempts, retry_delay
-    )
+    response_data = make_openrouter_request(api_key, payload, timeout, retry_attempts, retry_delay)
 
     # Process response
     if raw_json_output:
